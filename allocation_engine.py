@@ -1,26 +1,43 @@
-# Hydrocarbon Allocation Engine Prototype
-# Logic: Pro-rata Allocation with Uncertainty Propagation
-from decimal import Decimal
+from decimal import Decimal, getcontext
 
-def calculate_pro_rata(well_readings, total_fiscal_meter):
-    """
-    Calculates the allocated share of oil for each well based on their individual 
-    meter readings vs the total fiscal (actual) tank reading.
-    """
-    theoretical_total = sum(well_readings.values())
-    allocation_factor = Decimal(total_fiscal_meter) / Decimal(theoretical_total)
-    
-    allocated_results = {well: Decimal(reading) * allocation_factor 
-                         for well, reading in well_readings.items()}
-    
-    # Audit Trace
-    print(f"System Log: Theoretical Total: {theoretical_total}")
-    print(f"System Log: Allocation Factor applied: {allocation_factor}")
-    
-    return allocated_results
+# Set precision for oil & gas accounting
+getcontext().prec = 10 
 
-# Example inputs for the interview
-wells = {"Well_A": 450.5, "Well_B": 320.2, "Well_C": 229.3}
-total_received = 995.0 # This is slightly less than the sum due to meter uncertainty
+class AllocationEngine:
+    def __init__(self, fiscal_total):
+        self.fiscal_total = Decimal(str(fiscal_total))
+        self.audit_log = []
 
-print(calculate_pro_rata(wells, total_received))
+    def calculate_pro_rata(self, well_data):
+        """
+        well_data: dict of {'Well_Name': theoretical_reading}
+        """
+        theoretical_total = sum(Decimal(str(v)) for v in well_data.values())
+        
+        # The 'Allocation Factor' is the most important part for the auditor
+        allocation_factor = self.fiscal_total / theoretical_total
+        
+        results = {}
+        for well, reading in well_data.items():
+            allocated_vol = Decimal(str(reading)) * allocation_factor
+            results[well] = round(allocated_vol, 4)
+            
+            # Log for the Audit Trail
+            self.audit_log.append(f"Well: {well} | Factor: {allocation_factor} | Allocated: {allocated_vol}")
+            
+        return results
+
+# FOR EXAMPLE
+if __name__ == "__main__":
+    # Total reading at the tank (Fiscal Meter)
+    engine = AllocationEngine(fiscal_total=1000.00) 
+    
+    # Readings from the individual wells (Theoretical)
+    well_readings = {"Well_001": 500, "Well_002": 300, "Well_003": 250}
+    
+    output = engine.calculate_pro_rata(well_readings)
+    print("--- ALLOCATED RESULTS ---")
+    print(output)
+    print("\n--- AUDIT TRAIL ---")
+    for log in engine.audit_log:
+        print(log)
